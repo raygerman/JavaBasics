@@ -5,6 +5,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.gmail.raygerman.basics.NamedExceptions.InvalidArgumentException;
+
 public class WorkQueue<T> extends LoggingObject
 {
 	
@@ -43,16 +45,23 @@ public class WorkQueue<T> extends LoggingObject
 	public WorkQueue(WorkQueueImplementer<T> owner, String name)
 	{
 		super(name);
-		this.commonConstructor(owner, 1, null);
+		try
+		{
+			this.commonConstructor(owner, 1, null);
+		} catch (InvalidArgumentException e)
+		{
+			// We should be okay here because the only exception is for a thread count less than one
+			e.printStackTrace();
+		}
 	}
 	
-	public WorkQueue(WorkQueueImplementer<T> owner, String name, long threadCount)
+	public WorkQueue(WorkQueueImplementer<T> owner, String name, long threadCount) throws NamedExceptions.InvalidArgumentException
 	{
 		super(name);
 		this.commonConstructor(owner, threadCount, null);
 	}
 	
-	public WorkQueue(WorkQueueImplementer<T> owner, String name, long threadCount, Logger newLog)
+	public WorkQueue(WorkQueueImplementer<T> owner, String name, long threadCount, Logger newLog) throws NamedExceptions.InvalidArgumentException
 	{
 		super(name);
 		this.log_ = newLog;
@@ -60,7 +69,7 @@ public class WorkQueue<T> extends LoggingObject
 	}
 	
 	@SuppressWarnings("unused")
-	public void commonConstructor(WorkQueueImplementer<T> owner, long threadCount, Logger newLog)
+	public void commonConstructor(WorkQueueImplementer<T> owner, long threadCount, Logger newLog) throws NamedExceptions.InvalidArgumentException
 	{
 		if (threadCount > 0)
 		{
@@ -87,7 +96,7 @@ public class WorkQueue<T> extends LoggingObject
 		}
 		else
 		{
-			throw (new IllegalArgumentException("Cannot create WorkQueue with negative number of threads")); //$NON-NLS-1$
+			throw (new NamedExceptions.InvalidArgumentException("Cannot create WorkQueue with less than one threads")); //$NON-NLS-1$
 		}
 	}
 	
@@ -98,9 +107,9 @@ public class WorkQueue<T> extends LoggingObject
 			// Lazy initialization is the best initialization
 			if (!this.initialized_.getAndSet(true))
 			{
-				for (Worker worker : this.workers_)
+				for (Worker thisWorker : this.workers_)
 				{
-					worker.start();
+					thisWorker.start();
 				}
 			}
 			this.queue_.add(item);
@@ -111,9 +120,9 @@ public class WorkQueue<T> extends LoggingObject
 	{
 		this.log("Stopping all threads in " + this.name_); //$NON-NLS-1$
 		this.isRunning_.set(false);
-		for (Worker worker : this.workers_)
+		for (Worker thisWorker : this.workers_)
 		{
-			worker.interrupt();
+			thisWorker.interrupt();
 		}
 	}
 	
@@ -140,4 +149,5 @@ public class WorkQueue<T> extends LoggingObject
 	protected LinkedList<Worker> workers_ = null;
 	protected long numberOfThreads_ = 0;
 	protected WorkQueueImplementer<T> implementer_ = null;
+
 }
