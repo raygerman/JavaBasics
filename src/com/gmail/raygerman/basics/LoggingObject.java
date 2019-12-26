@@ -3,33 +3,39 @@ package com.gmail.raygerman.basics;
 public class LoggingObject
 {
 	
-	public LoggingObject()
+	public LoggingObject(String name)
 	{
-		this.log = null;
+		this.name_ = name;
+		this.log_ = Logger.getLog();
 	}
 	
-	public LoggingObject(Logger newLog)
+	public LoggingObject(String name, Logger newLog)
 	{
-		this.log = newLog;
+		this.name_ = name;
+		if (null == newLog)
+		{
+			this.log_ = Logger.getLog();
+		}
+		this.log_ = newLog;
 	}
 	
 	protected void log(String text)
 	{
-		if (null != this.log)
+		if (null != this.log_)
 		{
-			this.log.log(text);
+			this.log_.log(text);
 		}
 	}
 	
 	protected void log(Exception e)
 	{
-		if (null != this.log)
+		if (null != this.log_)
 		{
-			this.log.log(e);
+			this.log_.log(e);
 		}
 	}
 	
-	
-	protected Logger log = null;
+	protected final String name_;
+	protected Logger log_ = null;
 
 }

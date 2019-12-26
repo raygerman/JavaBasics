@@ -5,7 +5,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public abstract class WorkQueue<T>
+public class WorkQueue<T> extends LoggingObject
 {
 	
 	public static enum Policy {FIXED_THREAD_COUNT, THREAD_COUNT_GROWS}
@@ -16,21 +16,22 @@ public abstract class WorkQueue<T>
 		@Override
 		public void run()
 		{
-			while (WorkQueue.this.running.get())
+			while (WorkQueue.this.isRunning_.get())
 			{
 				T item;
 				try
 				{
-					item = WorkQueue.this.queue.take();
-					long runningThreadCount = WorkQueue.this.threadsRunning.incrementAndGet();
-					WorkQueue.this.doWork(item);
-					if (runningThreadCount == WorkQueue.this.numberOfThreads && WorkQueue.this.threadsGrow.get())
+					item = WorkQueue.this.queue_.take();
+					long runningThreadCount = WorkQueue.this.threadsRunning_.incrementAndGet();
+					WorkQueue.this.implementer_.doWork(WorkQueue.this, item);
+					if (runningThreadCount == WorkQueue.this.numberOfThreads_ && WorkQueue.this.threadsGrow_.get())
 					{
+						WorkQueue.this.log("Adding thread to " + WorkQueue.this.name_ + " due to congestion");  //$NON-NLS-1$//$NON-NLS-2$
 						Worker newWorker = new Worker();
 						newWorker.start();
-						WorkQueue.this.workers.add(newWorker);
+						WorkQueue.this.workers_.add(newWorker);
 					}
-					runningThreadCount = WorkQueue.this.threadsRunning.decrementAndGet();
+					runningThreadCount = WorkQueue.this.threadsRunning_.decrementAndGet();
 				} catch (@SuppressWarnings("unused") InterruptedException e)
 				{
 					// Nothing to do here
@@ -39,31 +40,49 @@ public abstract class WorkQueue<T>
 		}
 	}
 	
-	public WorkQueue()
+	public WorkQueue(WorkQueueImplementer<T> owner, String name)
 	{
-		this.commonConstructor(1);
+		super(name);
+		this.commonConstructor(owner, 1, null);
 	}
 	
-	public WorkQueue(long threadCount)
+	public WorkQueue(WorkQueueImplementer<T> owner, String name, long threadCount)
 	{
-		this.commonConstructor(threadCount);
+		super(name);
+		this.commonConstructor(owner, threadCount, null);
+	}
+	
+	public WorkQueue(WorkQueueImplementer<T> owner, String name, long threadCount, Logger newLog)
+	{
+		super(name);
+		this.log_ = newLog;
+		this.commonConstructor(owner, threadCount, newLog);
 	}
 	
 	@SuppressWarnings("unused")
-	public void commonConstructor(long threadCount)
+	public void commonConstructor(WorkQueueImplementer<T> owner, long threadCount, Logger newLog)
 	{
 		if (threadCount > 0)
 		{
-			this.threadsGrow = new AtomicBoolean(false);
-			this.numberOfThreads = threadCount;
-  		this.queue = new LinkedBlockingQueue<T>();
-  		this.running = new AtomicBoolean(true);
-  		this.threadsRunning = new AtomicLong(0);
-  		this.workers = new LinkedList<Worker>();
-  		this.initialized = new AtomicBoolean(false);
-  		for (long i = 0; i < this.numberOfThreads; i++)
+			if (null == newLog)
+			{
+				this.log_ = Logger.getLog();
+			}
+			else
+			{
+				this.log_ = newLog;
+			}
+			this.implementer_ = owner;
+			this.threadsGrow_ = new AtomicBoolean(false);
+			this.numberOfThreads_ = threadCount;
+  		this.queue_ = new LinkedBlockingQueue<T>();
+  		this.isRunning_ = new AtomicBoolean(true);
+  		this.threadsRunning_ = new AtomicLong(0);
+  		this.workers_ = new LinkedList<Worker>();
+  		this.initialized_ = new AtomicBoolean(false);
+  		for (long i = 0; i < this.numberOfThreads_; i++)
   		{
-  			this.workers.add(new Worker());
+  			this.workers_.add(new Worker());
   		}
 		}
 		else
@@ -74,24 +93,25 @@ public abstract class WorkQueue<T>
 	
 	public void Add(T item)
 	{
-		if (null != this.queue && this.running.get()) 
+		if (null != this.queue_ && this.isRunning_.get()) 
 		{
 			// Lazy initialization is the best initialization
-			if (!this.initialized.getAndSet(true))
+			if (!this.initialized_.getAndSet(true))
 			{
-				for (Worker worker : this.workers)
+				for (Worker worker : this.workers_)
 				{
 					worker.start();
 				}
 			}
-			this.queue.add(item);
+			this.queue_.add(item);
 		}
 	}
 	
 	public void stop()
 	{
-		this.running.set(false);
-		for (Worker worker : this.workers)
+		this.log("Stopping all threads in " + this.name_); //$NON-NLS-1$
+		this.isRunning_.set(false);
+		for (Worker worker : this.workers_)
 		{
 			worker.interrupt();
 		}
@@ -102,24 +122,22 @@ public abstract class WorkQueue<T>
 		switch (policy) 
 		{
 			case FIXED_THREAD_COUNT:
-				this.threadsGrow.set(false);
+				this.threadsGrow_.set(false);
 				break;
 			case THREAD_COUNT_GROWS:
-				this.threadsGrow.set(true);
+				this.threadsGrow_.set(true);
 				break;
 			default:
 				break;
 		}
 	}
 	
-	protected abstract void doWork(T item);
-	
-	protected AtomicLong threadsRunning = null;
-	protected AtomicBoolean running = null;
-	protected AtomicBoolean initialized = null;
-	protected AtomicBoolean threadsGrow = null;
-	protected LinkedBlockingQueue<T> queue = null;
-	protected LinkedList<Worker> workers = null;
-	protected long numberOfThreads = 0;
-
+	protected AtomicLong threadsRunning_ = null;
+	protected AtomicBoolean isRunning_ = null;
+	protected AtomicBoolean initialized_ = null;
+	protected AtomicBoolean threadsGrow_ = null;
+	protected LinkedBlockingQueue<T> queue_ = null;
+	protected LinkedList<Worker> workers_ = null;
+	protected long numberOfThreads_ = 0;
+	protected WorkQueueImplementer<T> implementer_ = null;
 }
