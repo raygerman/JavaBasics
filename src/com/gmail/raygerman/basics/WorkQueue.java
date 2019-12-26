@@ -39,36 +39,37 @@ public abstract class WorkQueue<T>
 		}
 	}
 	
-	public WorkQueue()
-	{
-		this.commonConstructor(1);
+	public WorkQueue(WorkQueueWorker worker)
+	
+		this.commonConstructor(1, worker);
 	}
 	
-	public WorkQueue(long threadCount)
+	public WorkQueue(WorkQueueWorker worker, long threadCount) throws NamedException.InvalidArgumentException
 	{
-		this.commonConstructor(threadCount);
+		this.commonConstructor(threadCount, worker);
 	}
 	
 	@SuppressWarnings("unused")
-	public void commonConstructor(long threadCount)
+	public void commonConstructor(long threadCount, WorkQueueWorker worker) throws NamedException.InvalidArgumentException
 	{
+		this.worker = worker;
 		if (threadCount > 0)
 		{
 			this.threadsGrow = new AtomicBoolean(false);
 			this.numberOfThreads = threadCount;
-  		this.queue = new LinkedBlockingQueue<T>();
-  		this.running = new AtomicBoolean(true);
-  		this.threadsRunning = new AtomicLong(0);
-  		this.workers = new LinkedList<Worker>();
-  		this.initialized = new AtomicBoolean(false);
-  		for (long i = 0; i < this.numberOfThreads; i++)
-  		{
-  			this.workers.add(new Worker());
-  		}
+			this.queue = new LinkedBlockingQueue<T>();
+			this.running = new AtomicBoolean(true);
+			this.threadsRunning = new AtomicLong(0);
+			this.workers = new LinkedList<Worker>();
+			this.initialized = new AtomicBoolean(false);
+			for (long i = 0; i < this.numberOfThreads; i++)
+			{
+				this.workers.add(new Worker());
+			}
 		}
 		else
 		{
-			throw (new IllegalArgumentException("Cannot create WorkQueue with negative number of threads")); //$NON-NLS-1$
+			throw (new NamedException.InvalidArgumentException("Cannot create WorkQueue with less than one threads")); //$NON-NLS-1$
 		}
 	}
 	
@@ -112,8 +113,7 @@ public abstract class WorkQueue<T>
 		}
 	}
 	
-	protected abstract void doWork(T item);
-	
+	protected WorkQueueWorker worker = null;	
 	protected AtomicLong threadsRunning = null;
 	protected AtomicBoolean running = null;
 	protected AtomicBoolean initialized = null;
