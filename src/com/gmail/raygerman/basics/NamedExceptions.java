@@ -13,7 +13,15 @@ public class NamedExceptions
 		}
 	}
 
+	public static class ConstructionFailedException extends Exception
+	{
+		private static final long serialVersionUID = -3214350491092890871L;
 
+		public ConstructionFailedException(String message)
+		{
+			super(message);
+		}
+	}
 
 
 }
