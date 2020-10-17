@@ -35,7 +35,7 @@ public class UnsignedByte
 		StringBuilder builder = new StringBuilder(array.length * 3);
 		for (int i = 0; i < array.length; i++)
 		{
-			builder.append(String.format("%02X", new Integer(toUnsigned(array[i]))) + " "); //$NON-NLS-1$ //$NON-NLS-2$
+			builder.append(String.format("%02X", Integer.valueOf(toUnsigned(array[i]))) + " "); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 		return(builder.toString());
 	}
@@ -45,7 +45,7 @@ public class UnsignedByte
 		StringBuilder builder = new StringBuilder(length * 3);
 		for (int i = 0; i < length; i++)
 		{
-			builder.append(String.format("0x%02X", new Integer(toUnsigned(array[i]))) + " "); //$NON-NLS-1$ //$NON-NLS-2$
+			builder.append(String.format("0x%02X", Integer.valueOf(toUnsigned(array[i]))) + " "); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 		return(builder.toString());
 	}

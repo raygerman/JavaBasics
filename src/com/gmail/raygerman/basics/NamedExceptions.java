@@ -52,4 +52,14 @@ public class NamedExceptions
 			super(message);
 		}
 	}
+	
+	public static class DataCorruptedException extends Exception
+	{
+		private static final long serialVersionUID = 5647206540675305998L;
+
+		public DataCorruptedException(String message)
+		{
+			super(message);
+		}
+	}
 }
